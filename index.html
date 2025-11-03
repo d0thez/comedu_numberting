@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컴교 AI 번호팅</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Pretendard', 'Inter', 'Noto Sans KR', sans-serif; }
+        
+        .chat-bubble-ai {
+            background-color: #dbeafe; /* blue-100 */
+            color: #1e40af; /* blue-800 */
+            border: 1px solid #bfdbfe; /* blue-200 */
+            border-bottom-left-radius: 0.25rem; /* 4px */
+            border-bottom-right-radius: 1.5rem;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+        }
+        .chat-bubble-user {
+            background-color: #fdf2f8; /* pink-50 */
+            color: #be185d; /* pink-700 */
+            border: 1px solid #fbcfe8; /* pink-200 */
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 0.25rem; /* 4px */
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f4f6; /* gray-100 */
+            border-top: 4px solid #ec4899; /* pink-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        #btn-send-answer:disabled {
+            background-color: #f3f4f6; /* gray-100 */
+            cursor: not-allowed;
+        }
+        #btn-send-answer:disabled svg {
+            fill: #9ca3af; /* gray-400 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="main-container" class="relative container mx-auto max-w-xl lg:max-w-3xl p-8 my-8 bg-white rounded-xl shadow-2xl min-h-[85vh] flex flex-col transition-all duration-300">
+
+        <button id="btn-fullscreen" class="absolute top-8 right-8 p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-300 z-10">
+            <svg id="icon-expand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+            <svg id="icon-contract" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 hidden">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" />
+            </svg>
+        </button>
+
+        <div id="page-welcome" class="page-container text-center flex flex-col justify-center items-center h-full flex-grow">
+            
+            <h1 class="text-5xl font-bold text-pink-500 mt-5 mb-7">AI 러브 매칭 센터 💘</h1>
+            
+            <div class="my-5">
+                <p class="text-2xl font-semibold text-gray-700">2025 예비교사페스티벌</p>
+                <p class="text-xl font-bold text-pink-400">X</p>
+                <p class="text-2xl font-semibold text-gray-700">COMEDU</p>
+            </div>
+
+            <p class="text-xl mb-5 font-semibold text-gray-700">
+                안녕하세요! 컴퓨터교육과 .COM 학생회입니다!
+            </p>
+
+            <p class="text-xl text-gray-600 mb-5">
+                Gemini 2.5 Flash가 당신의 답변을 분석하여<br>가장 잘 맞는 상대를 찾아드립니다!
+            </p>
+
+            <div class="w-full mt-4 mb-10 p-5 border border-pink-200 bg-pink-50 rounded-lg text-center">
+                <p class="font-semibold text-pink-800 text-lg">💰 강수훈 / 카카오뱅크 / 3333-32-7115949 💰</p>
+                <p class="text-pink-700 mt-1">번호 하나당 500원! 인당 최대 3개🤗</p>
+            </div>
+            
+            <button id="btn-start" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-5 px-6 rounded-full text-xl shadow-lg transition duration-400 mt-4">
+                시작하기
+            </button>
+        </div>
+
+        <div id="page-options" class="page-container space-y-8 hidden flex-grow">
+            <h2 class="text-3xl font-semibold text-gray-700">매칭 설정</h2>
+            
+            <div>
+                <label class="block text-xl font-medium text-gray-700 mb-3">1. 찾고 싶은 상대의 성별은?</label>
+                <fieldset class="grid grid-cols-2 gap-4">
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-300">
+                        <input type="radio" name="targetGender" value="남자" class="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <span class="ml-3 text-gray-700 text-lg font-medium">남자 👨🏻</span>
+                    </label>
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetGender" value="여자" class="h-5 w-5 text-pink-600 border-gray-300 focus:ring-pink-500">
+                        <span class="ml-3 text-gray-700 text-lg font-medium">여자 👩🏻</span>
+                    </label>
+                </fieldset>
+            </div>
+
+            <div>
+                <label class="block text-xl font-medium text-gray-700 mb-3">2. 찾고 싶은 상대의 학번은?</label>
+                <fieldset class="grid grid-cols-3 gap-3">
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetStudentId" value="all" class="sr-only" checked> 
+                        <span class="text-gray-700 text-lg font-medium">상관 없음</span>
+                    </label>
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetStudentId" value="high" class="sr-only">
+                        <span class="text-gray-700 text-lg font-medium">🐓 고학번(23~)</span>
+                    </label>
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetStudentId" value="low" class="sr-only">
+                        <span class="text-gray-700 text-lg font-medium">🐣 저학번(24,25)</span>
+                    </label>
+                </fieldset>
+            </div>
+
+            <div>
+                <label class="block text-xl font-medium text-gray-700 mb-3">3. 몇 명을 뽑아볼까요?</label>
+                <fieldset class="grid grid-cols-3 gap-3">
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetCount" value="1" class="sr-only" checked> 
+                        <span class="text-gray-700 text-lg font-medium">1명</span>
+                    </label>
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetCount" value="2" class="sr-only">
+                        <span class="text-gray-700 text-lg font-medium">2명</span>
+                    </label>
+                    <label class="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 has-[:checked]:bg-pink-50 has-[:checked]:border-pink-300">
+                        <input type="radio" name="targetCount" value="3" class="sr-only">
+                        <span class="text-gray-700 text-lg font-medium">3명</span>
+                    </label>
+                </fieldset>
+            </div>
+
+            <button id="btn-submit-options" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-5 px-6 rounded-full text-lg shadow-lg transition duration-300 mt-8">
+                다 선택했어요! (AI 질문 시작)
+            </button>
+        </div>
+
+        <div id="page-chat" class="page-container flex flex-col h-full flex-grow hidden" style="min-height: 60vh;">
+            <h2 class="text-3xl font-semibold text-gray-700 mb-4 text-center">AI 매칭 질문</h2>
+            <div id="chat-window" class="flex-grow bg-gray-50 p-4 rounded-lg overflow-y-auto mb-4 space-y-4">
+                </div>
+            
+            <div id="chat-input-container">
+                <div id="chat-input-area" class="flex items-center p-2 bg-gray-100 rounded-full shadow-sm border border-gray-200">
+                    <textarea id="chat-input" rows="1" 
+                        class="flex-grow py-3 px-5 bg-transparent border-none rounded-full resize-none focus:ring-0 text-base"
+                        placeholder="Gemini에게 답변하기 (100자 이내)"
+                        oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"></textarea>
+                    
+                    <button id="btn-send-answer" class="bg-pink-500 hover:bg-pink-600 text-white rounded-full p-3 m-1 shadow transition duration-300 flex-shrink-0" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6">
+                          <path d="M3.105 3.105a.75.75 0 01.884-.043l11.25 6.25a.75.75 0 010 1.372l-11.25 6.25a.75.75 0 01-.884-.043.75.75 0 01-.192-.838l2.29-6.361-2.29-6.361a.75.75 0 01.192-.838z" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex justify-end text-sm text-gray-400 pr-2 mt-2">
+                    <span id="char-counter">0</span> / 100
+                </div>
+            </div>
+        </div>
+
+        <div id="page-loading" class="page-container text-center flex flex-col justify-center items-center h-full flex-grow hidden" style="min-height: 60vh;">
+            <div class="loading-spinner mb-6"></div>
+            <h2 class="text-3xl font-semibold text-pink-500">AI가 매칭중입니다...</h2>
+            <p class="text-gray-600 mt-2 text-lg">조건에 맞는 상대를 분석 중입니다.<br>잠시만 기다려주세요!</p>
+        </div>
+
+        <div id="page-result" class="page-container hidden flex-grow">
+            <h2 id="result-title" class="text-3xl font-bold text-center text-pink-500 mb-6">🎉 매칭 결과! 🎉</h2>
+            
+            <p id="auto-home-timer" class="text-center text-pink-500 font-semibold text-lg mb-4 hidden"></p>
+            
+            <div id="result-cards" class="space-y-4">
+                </div>
+            
+            <button id="btn-go-home" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-5 px-6 rounded-full text-lg shadow-lg transition duration-300 mt-8">
+                홈으로 돌아가기
+            </button>
+        </div>
+
+        <footer class="text-center text-gray-400 text-sm mt-8 border-t pt-4">
+            <p>© 2025 KNU Dept. of Computer Education. All rights reserved.<br><br>
+                Core Concept & Initial Dev: Wang H.W.<br>
+                Advanced System & UI Enhancement: Kim D.H.</p>
+
+            <div id="total-picks-container" class="mt-1">
+                <span id="total-picks-counter" class="font-medium text-pink-500">집계 중...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module">
+        // -----------------------------------------------------------------
+        // 1. Firebase SDK 임포트 (변경 없음)
+        // -----------------------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getFirestore, collection, query, where, getDocs, doc, 
+            updateDoc, increment, setLogLevel, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // -----------------------------------------------------------------
+        // 2. API 키 (변경 없음 - 본인 키 사용)
+        // -----------------------------------------------------------------
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOVAUxum8gLD8RHtlEOb4fK80JZzljJvE",
+            authDomain: "numberting-b9a32.firebaseapp.com",
+            projectId: "numberting-b9a32",
+            storageBucket: "numberting-b9a32.firebasestorage.app",
+            messagingSenderId: "1032424015189",
+            appId: "1:1032424015189:web:d9bb076f20ab73379d1bdc",
+        };
+
+        // [수정됨] GEMINI_API_KEY 변수 삭제
+        // (Netlify 함수에서 환경 변수로 관리됩니다)
+
+        // -----------------------------------------------------------------
+        // 3. Firebase 초기화 (변경 없음)
+        // -----------------------------------------------------------------
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            await signInAnonymously(auth);
+            console.log("Firebase 익명 로그인 성공!");
+
+        } catch (error) {
+            console.error("Firebase 초기화 또는 익명 로그인 실패:", error);
+            alert("초기화에 실패했습니다. API 키가 올른지 확인 후 새로고침 해주세요.");
+            throw new Error("Firebase init failed");
+        }
+
+        // -----------------------------------------------------------------
+        // [조치 2 수정됨] 총 뽑힌 횟수 실시간 집계 (최적화)
+        // -----------------------------------------------------------------
+        let unsubscribeTotalPicks; 
+        const counterElement = document.getElementById('total-picks-counter');
+        const picksCounterContainer = document.getElementById('total-picks-container'); 
+
+        try {
+            // 'participants' 컬렉션 전체가 아닌, 'stats' 컬렉션의 'counters' 문서 1개만 감시합니다.
+            const counterDocRef = doc(db, "stats", "counters");
+            
+            unsubscribeTotalPicks = onSnapshot(counterDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const totalPicks = data.totalPicks || 0; // 'totalPicks' 필드 사용
+                    counterElement.textContent = `총 ${totalPicks}회 매칭됨`;
+                } else {
+                    // 문서가 없는 경우 (최초 생성 전)
+                    counterElement.textContent = "집계 중... (카운터 없음)";
+                    console.warn("[Firestore] 'stats/counters' 문서가 존재하지 않습니다. Firestore에서 수동으로 생성해주세요.");
+                }
+            }, (error) => {
+                console.error("[Firestore] 총 횟수 집계 리스너 오류:", error);
+                counterElement.textContent = "집계 오류";
+            });
+
+        } catch (error) {
+            console.error("총 횟수 집계 리스너 설정 실패:", error);
+            counterElement.textContent = "집계 오류";
+        }
+
+
+        // -----------------------------------------------------------------
+        // 4. 전역 변수 및 질문 목록 (변경 없음)
+        // -----------------------------------------------------------------
+        let userOptions = {}; 
+        let userAnswers = []; 
+        let currentQuestionIndex = 0;
+        let resultPageTimer = null; 
+
+        const AI_QUESTIONS = [
+            "누군가와 함께 있을 때, 가장 편안하다고 느끼는 순간은 언제인가요?",
+            "스트레스를 받을 때, 주로 어떤 방식으로 풀거나 대처하나요?",
+            "당신이 생각하는 '좋은 사람'은 어떤 사람인가요?"
+        ];
+        // -----------------------------------------------------------------
+        // 5. 페이지 전환 로직 (변경 없음)
+        // -----------------------------------------------------------------
+        const pages = document.querySelectorAll('.page-container');
+        const mainContainer = document.getElementById('main-container'); 
+        const fsButton = document.getElementById('btn-fullscreen'); 
+
+        function showPage(pageId) {
+            
+            mainContainer.classList.remove('max-w-4xl'); 
+            mainContainer.classList.add('max-w-xl', 'lg:max-w-3xl');
+
+            if (pageId === 'page-welcome') {
+                picksCounterContainer.classList.remove('hidden');
+                fsButton.classList.remove('hidden'); 
+            } else {
+                picksCounterContainer.classList.add('hidden');
+                fsButton.classList.add('hidden'); 
+            }
+
+            pages.forEach(page => {
+                if (page.id === pageId) {
+                    page.classList.remove('hidden');
+                } else {
+                    page.classList.add('hidden');
+                }
+            });
+            window.scrollTo(0, 0); 
+        }
+
+        if(document.getElementById('page-welcome').classList.contains('hidden') === false) {
+             picksCounterContainer.classList.remove('hidden');
+        }
+
+
+        // -----------------------------------------------------------------
+        // 6. 이벤트 리스너 (버튼 클릭) (변경 없음)
+        // -----------------------------------------------------------------
+        
+        document.getElementById('btn-start').addEventListener('click', () => {
+            showPage('page-options');
+        });
+
+        document.getElementById('btn-fullscreen').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .catch(err => {
+                        console.warn(`전체화면 전환 실패: ${err.message}`);
+                    });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const iconExpand = document.getElementById('icon-expand');
+            const iconContract = document.getElementById('icon-contract');
+            if (document.fullscreenElement) {
+                iconExpand.classList.add('hidden');
+                iconContract.classList.remove('hidden');
+            } else {
+                iconExpand.classList.remove('hidden');
+                iconContract.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('btn-submit-options').addEventListener('click', () => {
+            const targetGender = document.querySelector('input[name="targetGender"]:checked');
+            if (!targetGender) {
+                alert("찾고 싶은 상대의 성별을 선택해주세요!");
+                return;
+            }
+            
+            const targetStudentId = document.querySelector('input[name="targetStudentId"]:checked');
+            const targetCount = document.querySelector('input[name="targetCount"]:checked');
+
+            userOptions = {
+                gender: targetGender.value,
+                studentId: targetStudentId.value, 
+                count: parseInt(targetCount.value, 10) 
+            };
+            
+            startAIChat();
+        });
+
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('btn-send-answer');
+        const charCounter = document.getElementById('char-counter');
+        const maxChars = 100;
+
+        sendButton.addEventListener('click', handleAnswerSubmit);
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); 
+                handleAnswerSubmit();
+            }
+        });
+
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = (chatInput.scrollHeight) + 'px';
+
+            const currentLength = chatInput.value.length;
+            charCounter.textContent = currentLength;
+            
+            if (currentLength > maxChars) {
+                charCounter.parentElement.classList.add('text-red-500');
+                charCounter.parentElement.classList.remove('text-gray-400');
+            } else {
+                charCounter.parentElement.classList.remove('text-red-500');
+                charCounter.parentElement.classList.add('text-gray-400');
+            }
+            sendButton.disabled = (currentLength === 0 || currentLength > maxChars);
+        });
+        
+        document.getElementById('btn-go-home').addEventListener('click', () => {
+            
+            if (resultPageTimer) {
+                clearInterval(resultPageTimer); 
+                resultPageTimer = null;
+                console.log("타이머 중지: 사용자가 수동으로 홈 복귀");
+            }
+
+            document.getElementById('auto-home-timer').classList.add('hidden');
+
+            userOptions = {};
+            userAnswers = [];
+            currentQuestionIndex = 0;
+            document.getElementById('chat-window').innerHTML = '';
+            document.getElementById('result-cards').innerHTML = '';
+            document.getElementById('chat-input').value = '';
+            charCounter.textContent = 0;
+            charCounter.parentElement.classList.remove('text-red-500');
+            charCounter.parentElement.classList.add('text-gray-400');
+            sendButton.disabled = true;
+            document.querySelectorAll('input[name="targetGender"]').forEach(radio => radio.checked = false);
+            document.querySelector('input[name="targetStudentId"][value="all"]').checked = true;
+            document.querySelector('input[name="targetCount"][value="1"]').checked = true;
+
+            showPage('page-welcome');
+        });
+
+        // -----------------------------------------------------------------
+        // 7. AI 채팅 로직 (변경 없음)
+        // -----------------------------------------------------------------
+
+        function startAIChat() {
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            document.getElementById('chat-window').innerHTML = ''; 
+            showPage('page-chat');
+            askNextQuestion();
+        }
+
+        function askNextQuestion() {
+            if (currentQuestionIndex < AI_QUESTIONS.length) {
+                const question = AI_QUESTIONS[currentQuestionIndex];
+                addChatMessage(question, 'ai');
+                document.getElementById('chat-input').value = '';
+                document.getElementById('chat-input').disabled = false;
+                document.getElementById('btn-send-answer').disabled = true; 
+                document.getElementById('char-counter').textContent = 0;
+                document.getElementById('char-counter').parentElement.classList.remove('text-red-500');
+                document.getElementById('char-counter').parentElement.classList.add('text-gray-400');
+                const textarea = document.getElementById('chat-input');
+                textarea.style.height = 'auto';
+            } else {
+                startMatching();
+            }
+        }
+
+        function handleAnswerSubmit() {
+            const inputElement = document.getElementById('chat-input');
+            const answer = inputElement.value.trim();
+
+            if (answer.length === 0) return; 
+            if (answer.length > maxChars) {
+                alert("답변이 너무 깁니다. 100자 이내로 작성해주세요."); 
+                return;
+            }
+
+            userAnswers.push(answer);
+            addChatMessage(answer, 'user');
+
+            inputElement.value = "Gemini가 다음 질문을 준비중입니다...";
+            inputElement.disabled = true;
+            document.getElementById('btn-send-answer').disabled = true; 
+
+            currentQuestionIndex++;
+            
+            setTimeout(askNextQuestion, 1000);
+        }
+
+        function addChatMessage(message, sender) {
+            const chatWindow = document.getElementById('chat-window');
+            const bubble = document.createElement('div');
+            bubble.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const textElement = document.createElement('p');
+            textElement.className = `max-w-[80%] p-3 px-5 shadow-sm text-base ${sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`; 
+            
+            bubble.appendChild(textElement);
+            chatWindow.appendChild(bubble);
+
+            if (sender === 'ai') {
+                typeMessage(textElement, message, () => {
+                    chatWindow.scrollTop = chatWindow.scrollHeight; 
+                });
+            } else {
+                textElement.textContent = message;
+                chatWindow.scrollTop = chatWindow.scrollHeight; 
+            }
+        }
+
+        function typeMessage(element, message, callback) {
+            let index = 0;
+            element.textContent = ''; 
+            const intervalId = setInterval(() => {
+                if (index < message.length) {
+                    element.textContent += message.charAt(index);
+                    index++;
+                    const chatWindow = document.getElementById('chat-window');
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                } else {
+                    clearInterval(intervalId);
+                    if (callback) callback(); 
+                }
+            }, 50); 
+        }
+
+        // -----------------------------------------------------------------
+        // 8. AI 매칭 로직 (핵심)
+        // -----------------------------------------------------------------
+        
+        async function startMatching() {
+            showPage('page-loading'); 
+
+            try {
+                // [조치 3 수정됨] fetchCandidates 함수 자체가 최적화되었습니다.
+                const candidates = await fetchCandidates();
+                
+                if (candidates.length === 0) {
+                    alert("조건에 맞는 상대를 찾지 못했습니다. 옵션을 변경하여 다시 시도해보세요.");
+                    showPage('page-options'); 
+                    return;
+                }
+                
+                // [수정됨] getAINAnalysis 함수가 Netlify 함수를 호출합니다.
+                const topMatches = await getAINAnalysis(candidates);
+                
+                displayResults(topMatches);
+                
+                // [조치 2 수정됨] updatePickCounts 함수 자체가 최적화되었습니다.
+                await updatePickCounts(topMatches);
+
+                if (resultPageTimer) clearInterval(resultPageTimer); 
+                
+                let countdown = 60; // (1분 유지)
+                const timerElement = document.getElementById('auto-home-timer');
+                
+                timerElement.textContent = `${countdown}초 후 메인화면으로 돌아갑니다...`;
+                timerElement.classList.remove('hidden');
+
+                resultPageTimer = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        timerElement.textContent = `${countdown}초 후 메인화면으로 돌아갑니다...`;
+                    } else {
+                        clearInterval(resultPageTimer);
+                        resultPageTimer = null;
+                        console.log("카운트다운 완료. 홈으로 자동 복귀합니다.");
+                        document.getElementById('btn-go-home').click();
+                    }
+                }, 1000); 
+
+                showPage('page-result');
+
+            } catch (error) {
+                console.error("매칭 실패:", error);
+                if (error.message.includes("composite index")) {
+                     alert(`[개발자 오류] Firestore 복합 인덱스가 필요합니다. F12(콘솔)를 열어 오류 메시지의 링크를 클릭해 인덱스를 생성하세요.`);
+                } else {
+                     alert(`매칭 중 오류가 발생했습니다: ${error.message}. 홈으로 돌아갑니다.`);
+                }
+                document.getElementById('btn-go-home').click();
+            }
+        }
+
+        // [조치 3 수정됨] 8-1. Firebase 후보 가져오기 (쿼리 최적화)
+        async function fetchCandidates() {
+            const participantsRef = collection(db, "participants");
+            const studentIdPref = userOptions.studentId;
+
+            // 1. 기본 쿼리 (성별 필터링)
+            let q = query(participantsRef, where("gender", "==", userOptions.gender));
+
+            // 2. 학번 필터링을 Firestore 쿼리에 직접 추가
+            if (studentIdPref === 'low') {
+                // 'in' 쿼리는 최대 30개까지 지원합니다. (["24", "25"]는 2개이므로 OK)
+                q = query(q, where("studentId", "in", ["24", "25"]));
+            } else if (studentIdPref === 'high') {
+                // '24'보다 작은 문자열 (예: "23", "22", "21"...)
+                // 학번이 숫자가 아닌 문자열로 저장되어 있어야 올바르게 작동합니다.
+                q = query(q, where("studentId", "<", "24")); 
+            }
+            // studentIdPref가 'all'이면 추가 필터링을 하지 않습니다.
+
+            // 3. 최적화된 쿼리 실행
+            // ※ 참고: 이 쿼리가 처음 실패하면 콘솔의 오류 링크를 클릭하여
+            // (gender, studentId) 복합 인덱스를 생성해야 합니다.
+            const querySnapshot = await getDocs(q);
+
+            const candidates = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                
+                // 4. 클라이언트에서는 'pickLimit' 관련 필터링만 수행
+                const timesPicked = data.timesPicked || 0; 
+                const isPickable = data.pickLimit > 0 && timesPicked < data.pickLimit;
+                
+                if (isPickable) {
+                    // 학번(studentId) 필터링은 이미 Firestore에서 완료됨
+                    candidates.push({
+                        id: doc.id,
+                        name: data.name,
+                        department: data.department,
+                        studentId: data.studentId, 
+                        contact: data.contact, 
+                        q1: data.q1,
+                        q2: data.q2,
+                        q3: data.q3,
+                    });
+                }
+            });
+            
+            console.log(`[Firestore] 쿼리 필터링된 후보 ${candidates.length}명:`, candidates);
+            return candidates;
+        }
+
+        // =================================================================
+        // [수정됨] 8-2. Gemini AI 분석 요청 (오류 처리 수정됨)
+        // 'Body is disturbed' 오류를 피하기 위해 응답 본문을 "단 한 번만" 읽도록 수정
+        // =================================================================
+        async function getAINAnalysis(candidates) {
+            
+            // 1. 서버 함수에 보낼 데이터만 준비
+            const payload = {
+                userAnswers: userAnswers,
+                candidates: candidates.map(c => ({ id: c.id, q1: c.q1, q2: c.q2, q3: c.q3 })),
+                userOptionsCount: userOptions.count,
+                AI_QUESTIONS: AI_QUESTIONS
+            };
+
+            let response;
+            try {
+                console.log("Netlify 함수 호출 시작... (/.netlify/functions/get-ai-analysis)");
+                
+                // 2. Google API가 아닌, 우리 Netlify 함수 주소를 호출
+                response = await fetchWithRetry("/.netlify/functions/get-ai-analysis", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+            } catch (error) {
+                console.error("Netlify 함수 호출 중 네트워크 오류:", error);
+                throw new Error("매칭 서버와 통신에 실패했습니다.");
+            }
+
+            // [수정된 부분]
+            if (!response.ok) {
+                // 3-A. 오류 응답 처리
+                let errorText = await response.text(); // 응답을 텍스트로 '한 번만' 읽습니다.
+                let errorMessage = errorText;
+
+                // 텍스트가 JSON 형태인지 확인
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.error) {
+                        errorMessage = errorJson.error; // { "error": "메시지" } 형태
+                    }
+                } catch (e) {
+                    // JSON 파싱 실패. errorMessage는 이미 text 원본이므로 괜찮음.
+                }
+
+                console.error(`Netlify 함수 오류 응답 (Status: ${response.status}):`, errorMessage);
+                
+                if (response.status === 429) {
+                     throw new Error("API 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.");
+                }
+                throw new Error(`매칭 서버가 오류를 반환했습니다: ${errorMessage}`);
+            }
+
+            // 3-B. 성공 응답 처리
+            let topMatchesFromAI;
+            try {
+                 topMatchesFromAI = await response.json(); // 성공 응답을 JSON으로 '한 번만' 읽습니다.
+            } catch(e) {
+                console.error("Netlify 함수가 반환한 JSON 파싱 오류:", e);
+                throw new Error("서버가 반환한 데이터 형식이 잘못되었습니다.");
+            }
+            // [수정 끝]
+
+            // 4. 기존 로직과 동일 (후보자 정보와 AI 분석 결과 결합)
+            const finalMatches = topMatchesFromAI.map(aiMatch => {
+                const originalCandidate = candidates.find(c => c.id === aiMatch.id);
+                if (!originalCandidate) return null; 
+                
+                return {
+                    ...originalCandidate, 
+                    ...aiMatch 
+                };
+            }).filter(match => match !== null); 
+            
+            console.log("최종 매칭 결과 (정보 결합됨):", finalMatches);
+            return finalMatches;
+        }
+        
+        // 8-3. 네트워크 재시도 (변경 없음)
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if ((response.status === 429 || response.status >= 500) && retries > 0) {
+                    console.warn(`API 요청 재시도 (Status: ${response.status})... ${retries - 1}회 남음.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                }
+                return response;
+            } catch (error) { 
+                if (retries > 0) {
+                    console.warn(`API 요청 재시도 (네트워크 오류)... ${retries - 1}회 남음.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                }
+                throw error; 
+            }
+        }
+
+        // 8-4. 결과 카드 그리기 (변경 없음)
+        function displayResults(matches) {
+            const container = document.getElementById('result-cards');
+            container.innerHTML = ''; 
+
+            if (!matches || matches.length === 0) {
+                container.innerHTML = '<p class="text-gray-600 text-center">매칭된 상대를 찾지 못했습니다.</p>';
+                return;
+            }
+
+            document.getElementById('result-title').textContent = `🎉 매칭 결과! 🎉`;
+            container.className = "space-y-4";
+
+            matches.forEach(match => {
+                const card = document.createElement('div');
+                card.className = 'p-5 bg-white border border-pink-100 rounded-lg shadow-lg';
+                
+                const formattedPhone = formatPhoneNumber(match.contact);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-2xl font-bold text-gray-800">${match.name}</h3>
+                        <span class="text-xl font-bold text-pink-500">일치율 ${match.matchScore}%</span>
+                    </div>
+                    <p class="text-gray-600 mb-4">${match.department} / ${match.studentId}학번</p>
+                    <p class="text-xl font-semibold text-gray-700 mb-2">📞 연락처: ${formattedPhone}</p>
+                    <div class="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+                        <p class="text-sm font-semibold text-pink-600">AI의 매칭 이유:</p>
+                        <p class="text-gray-700">${match.matchReason}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 8-4.5. 전화번호 포맷팅 (변경 없음)
+        function formatPhoneNumber(phone) {
+            if (!phone) return "정보 없음";
+            
+            let cleaned = ('' + phone).replace(/\D/g, ''); 
+            
+            if (cleaned.length === 10 && !cleaned.startsWith('0')) {
+                cleaned = '0' + cleaned; 
+            }
+
+            if (cleaned.length === 11) {
+                return `${cleaned.substring(0, 3)}-${cleaned.substring(3, 7)}-${cleaned.substring(7)}`;
+            } else if (cleaned.length === 10) {
+                if (cleaned.startsWith('02')) {
+                    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
+                } else {
+                    return `${cleaned.substring(0, 3)}-${cleaned.substring(3, 6)}-${cleaned.substring(6)}`;
+                }
+            }
+            
+            return phone; 
+        }
+
+        // [조치 2 수정됨] 8-5. timesPicked 및 총 횟수 업데이트 (최적화)
+        async function updatePickCounts(matches) {
+            // 'stats/counters' 문서 참조
+            const counterDocRef = doc(db, "stats", "counters");
+
+            for (const match of matches) {
+                try {
+                    // 1. 매칭된 참가자의 문서 참조
+                    const participantDocRef = doc(db, "participants", match.id);
+                    
+                    // 2. 해당 참가자의 timesPicked 1 증가
+                    await updateDoc(participantDocRef, {
+                        timesPicked: increment(1) 
+                    });
+
+                    // 3. (추가) 'stats/counters' 문서의 totalPicks 1 증가
+                    await updateDoc(counterDocRef, {
+                        totalPicks: increment(1)
+                    });
+                    
+                    console.log(`[Firestore] ${match.name}님 timesPicked 및 총 횟수 업데이트 성공`);
+                } catch (error) {
+                    console.error(`[Firestore] ${match.name}님 업데이트 실패:`, error);
+                    // 한 쪽이 실패해도 계속 진행 (최악의 경우 카운터가 1~2개 안 맞을 수 있으나, 매칭 자체는 성공)
+                }
+            }
+        }
+
+    </script>
+</body>
+</html>
